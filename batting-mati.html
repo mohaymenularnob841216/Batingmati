@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ব্যাটিং সিরিয়াল</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atma:wght@500;700&family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#e6d5b8; --surface:#f1e5cd; --ink:#2a2116; --muted:#6e5d44;
+  --accent:#2f7a4b; --accent-ink:#fff; --border:#c9b48e; --shadow:rgba(42,33,22,.18);
+  --soil:#b48a5c; --carve:#3a2712; --edge:rgba(255,236,200,.55); --dust:rgba(240,216,178,.9);
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#14231a; --surface:#1c3125; --ink:#f0e9d6; --muted:#a9b8a6;
+    --accent:#6fcf97; --accent-ink:#0e1f15; --border:#2c4a39; --shadow:rgba(0,0,0,.4);
+    --soil:#54402b; --carve:#f2e3c4; --edge:rgba(0,0,0,.55); --dust:rgba(205,172,128,.75);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14231a; --surface:#1c3125; --ink:#f0e9d6; --muted:#a9b8a6;
+  --accent:#6fcf97; --accent-ink:#0e1f15; --border:#2c4a39; --shadow:rgba(0,0,0,.4);
+  --soil:#54402b; --carve:#f2e3c4; --edge:rgba(0,0,0,.55); --dust:rgba(205,172,128,.75);
+  color-scheme:dark;
+}
+html{background:var(--bg);scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:'Hind Siliguri','Noto Sans Bengali','Kalpurush',system-ui,sans-serif;font-size:17px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+main{max-width:520px;margin:0 auto;padding:20px 16px 32px}
+h1{font-size:28px;line-height:1.25;margin:8px 0 4px;font-weight:700}
+h2{font-size:19px;margin:0 0 6px;font-weight:600}
+.sub{margin:0 0 16px;color:var(--muted);min-height:26px}
+.hint{margin:0 0 12px;color:var(--muted);font-size:15px}
+section{margin:0 0 24px;padding:16px;background:var(--surface);border:1px solid var(--border);border-radius:14px}
+button,select,input{font:inherit;color:inherit}
+button{min-height:48px;padding:10px 16px;border-radius:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:default}
+.primary{width:100%;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;font-size:18px}
+.link{background:none;border:0;color:var(--muted);width:100%;margin-top:6px}
+.btns{display:flex;gap:8px;margin-bottom:12px}
+.btns button{flex:1;font-size:15px}
+.names{display:grid;gap:8px}
+.nrow{display:flex;align-items:center;gap:10px}
+.nrow .num{width:26px;text-align:right;color:var(--muted);flex:none}
+input[type=text]{flex:1;min-width:0;min-height:46px;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg)}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 0}
+select{min-height:44px;padding:6px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);min-width:130px}
+
+/* মাটির মাঠ */
+.ground{
+  position:relative;overflow:hidden;border-radius:16px;padding:14px 14px 18px;
+  background:
+    radial-gradient(ellipse at 18% 12%,rgba(255,235,200,.22),transparent 55%),
+    radial-gradient(ellipse at 85% 80%,rgba(0,0,0,.2),transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .22 0 0 0 0 .14 0 0 0 0 .07 1.6 0 0 0 -.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    var(--soil);
+  box-shadow:inset 0 0 40px rgba(0,0,0,.28);
+  animation:thump .3s ease-out both;animation-delay:var(--bd,0ms);
+}
+.ground:not(.ready) .slot{pointer-events:none}
+.board{position:relative;padding-top:92px}
+.row{display:flex;height:50px;transition:opacity .4s}
+.shown .row:not(.taken){opacity:.55}
+.num{width:88px;flex:none;display:flex;align-items:center;justify-content:center;font:700 32px/1 'Atma','Hind Siliguri',sans-serif}
+.num span{display:inline-block;color:var(--carve);text-shadow:0 2px 0 var(--edge);transform:rotate(var(--r,0deg));animation:write .4s ease-out both;animation-delay:var(--d)}
+.slot{flex:1;min-width:0;position:relative;min-height:50px;padding:0;background:none;border:0;border-radius:8px}
+.ln{position:absolute;left:8px;bottom:6px;width:calc(100% - 12px);height:14px;overflow:visible}
+.ln path{fill:none;stroke:var(--carve);stroke-width:3.4;stroke-linecap:round;stroke-dasharray:1;animation:draw .5s ease-out both;animation-delay:var(--d)}
+.ln path.hi{stroke:var(--edge)}
+.nm{position:absolute;left:14px;right:8px;bottom:17px;text-align:left;font:700 24px/1.15 'Atma','Hind Siliguri',sans-serif;color:var(--carve);text-shadow:0 2px 0 var(--edge);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm.on{animation:write .45s ease-out both}
+.slot:active .ln{transform:translateY(1px)}
+.dust{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--dust);pointer-events:none;animation:dust .65s ease-out forwards}
+/* ব্যাট */
+.bat{position:absolute;left:-8px;top:6px;bottom:6px;width:100px;z-index:5;pointer-events:none;transform-origin:50% 90%;filter:drop-shadow(0 10px 12px rgba(0,0,0,.5));animation:drop .9s cubic-bezier(.2,.7,.3,1) both;animation-delay:var(--d)}
+.bat.off{animation:lift .95s cubic-bezier(.5,0,.75,.3) forwards}
+.bat i{position:absolute;display:block}
+.bat .handle{top:0;left:50%;width:26px;height:98px;margin-left:-13px;border-radius:9px 9px 3px 3px;background:repeating-linear-gradient(180deg,#1f1f1f 0 6px,#3b3b3b 6px 10px)}
+.bat .blade{top:88px;bottom:0;left:0;right:0;clip-path:polygon(28% 0,72% 0,100% 11%,100% 100%,0 100%,0 11%);border-radius:0 0 18px 18px;background:repeating-linear-gradient(90deg,rgba(120,80,30,.2) 0 2px,transparent 2px 9px),linear-gradient(90deg,#c9985a 0%,#ecd09b 35%,#f6e2b5 55%,#d9b070 100%)}
+.bat .tape{top:96px;left:30%;right:30%;height:10px;background:#c8412f}
+.bat .tag{top:190px;left:34px;width:32px;height:90px;border-radius:5px;background:#2b5aa8;box-shadow:inset 0 0 0 3px rgba(255,255,255,.55)}
+@keyframes write{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(-6px -6px -6px -6px)}}
+@keyframes draw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+@keyframes drop{0%{transform:translateY(-110%) rotate(6deg);opacity:0}8%{opacity:1}70%{transform:translateY(2%) rotate(-1.5deg)}85%{transform:translateY(-1%) rotate(.6deg)}100%{transform:none;opacity:1}}
+@keyframes lift{0%{transform:none}30%{transform:translate(4%,-3%) rotate(5deg)}100%{transform:translate(-160%,-6%) rotate(-32deg)}}
+@keyframes thump{0%{transform:none}40%{transform:translateY(4px)}100%{transform:none}}
+@keyframes dust{to{transform:translate(var(--x),var(--y)) scale(1.8);opacity:0}}
+@keyframes pop{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+/* বাটন বার ও শিট */
+.dock{position:sticky;bottom:0;margin:14px -16px 0;padding:12px 16px calc(10px + env(safe-area-inset-bottom,0px));background:linear-gradient(transparent,var(--bg) 28%)}
+.acts{display:flex;gap:10px}
+.acts button{flex:1}
+.acts .primary{flex:2;width:auto}
+.sheet{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.5);display:flex;align-items:flex-end}
+.sheet[hidden]{display:none}
+.panel{width:100%;max-width:520px;margin:0 auto;max-height:80%;overflow-y:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px var(--shadow)}
+.panel h3{margin:0 0 12px;font-size:20px}
+.chips{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chips button{font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.res{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:8px}
+.res li{display:flex;align-items:center;gap:14px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;animation:pop .45s both;animation-delay:var(--d)}
+.res .no{flex:none;min-width:48px;font-weight:700;font-size:20px;color:var(--accent)}
+.res .nm2{font-size:19px;font-weight:600;overflow-wrap:anywhere}
+.res li.empty .nm2{color:var(--muted);font-weight:400}
+@media (prefers-reduced-motion: reduce){
+  .ground,.num span,.ln path,.nm.on,.res li{animation:none}
+  .bat{animation:none}.bat.off{animation:none;display:none}
+  .dust{display:none}
+}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<div id="sheet" class="sheet" hidden></div>
+<script>
+const app = document.getElementById('app');
+const sheet = document.getElementById('sheet');
+const BN = '০১২৩৪৫৬৭৮৯';
+const bn = n => String(n).replace(/\d/g, d => BN[d]);
+const ORD = ['', '১ম', '২য়', '৩য়', '৪র্থ', '৫ম', '৬ষ্ঠ', '৭ম', '৮ম', '৯ম', '১০ম'];
+const ord = n => ORD[n] || bn(n) + 'তম';
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = s => document.querySelector(s);
+const MAX = 15;
+
+let names = Array(MAX).fill('');
+let serial = [];   // serial[i] = i নম্বর সারিতে লেখা ব্যাটিং নম্বর
+let claims = [], history = [], rowsEl = [];
+let ready = false, done = false, armed = false, armTimer = null, timers = [], ground = null;
+
+try {
+  const s = JSON.parse(localStorage.getItem('bat-names') || 'null');
+  if (Array.isArray(s)) names = s.concat(Array(MAX).fill('')).slice(0, MAX).map(x => String(x || ''));
+} catch (e) {}
+const save = () => { try { localStorage.setItem('bat-names', JSON.stringify(names)); } catch (e) {} };
+
+const players = () => names.map((n, i) => ({ n: n.trim(), i })).filter(p => p.n);
+const ident = n => Array.from({ length: n }, (_, i) => i + 1);
+const shuffle = a => {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+const clearTimers = () => { timers.forEach(clearTimeout); timers = []; clearTimeout(armTimer); armed = false; };
+
+/* ---------- সেটআপ ---------- */
+function setup() {
+  clearTimers(); closeSheet();
+  const n = players().length;
+  if (serial.length !== n) serial = shuffle(ident(n));
+  app.innerHTML = `
+    <h1>🏏 ব্যাটিং সিরিয়াল</h1>
+    <p class="sub">মাটিতে নাম্বার লিখে, দাগ টেনে, ব্যাট দিয়ে ঢেকে দেওয়ার সেই খেলা।</p>
+    <section>
+      <h2>খেলোয়াড়ের নাম <span id="cnt"></span></h2>
+      <p class="hint">সর্বোচ্চ ১৫ জন। যতজন খেলবে, ততজনের নাম লেখো।</p>
+      <div class="names">${names.map((v, i) => `
+        <div class="nrow"><span class="num">${bn(i + 1)}</span>
+        <input type="text" data-i="${i}" maxlength="24" value="${esc(v)}" placeholder="খেলোয়াড় ${bn(i + 1)}" autocomplete="off" enterkeyhint="next"></div>`).join('')}
+      </div>
+    </section>
+    <section>
+      <h2>নাম্বার ওলটপালট করো</h2>
+      <p class="hint">ওপর থেকে নিচে কোন সারিতে কত নম্বর লেখা হবে, তুমি ঠিক করো। নিজে না সাজালে নিজে নিজেই ওলটপালট হয়ে যাবে। নাম যোগ-বিয়োগ করলে এটা আবার নতুন হবে, তাই আগে নাম দাও।</p>
+      <div class="btns">
+        <button id="shuf">ওলটপালট করো</button>
+        <button id="inorder">১, ২, ৩… সাজাও</button>
+      </div>
+      <div id="serial"></div>
+    </section>
+    <button id="go" class="primary">মাঠে নামাও</button>`;
+  drawSerial();
+  updateCount();
+}
+
+function updateCount() {
+  const n = players().length;
+  $('#cnt').textContent = `(${bn(n)}/${bn(MAX)})`;
+  $('#go').disabled = n < 2;
+}
+
+function drawSerial() {
+  const n = serial.length, box = $('#serial');
+  if (n < 2) { box.innerHTML = '<p class="hint">কমপক্ষে দুজনের নাম দিলে নাম্বার সাজানো যাবে।</p>'; return; }
+  box.innerHTML = serial.map((v, i) => `
+    <label class="srow"><span>সারি ${bn(i + 1)}</span>
+    <select data-i="${i}">${ident(n).map(k => `<option value="${k}"${k === v ? ' selected' : ''}>লেখা হবে ${bn(k)}</option>`).join('')}</select></label>`).join('');
+}
+
+app.addEventListener('input', e => {
+  const t = e.target;
+  if (!t.matches('input[type=text]')) return;
+  const before = players().length;
+  names[+t.dataset.i] = t.value;
+  save();
+  const after = players().length;
+  if (after !== before) { serial = shuffle(ident(after)); drawSerial(); }
+  updateCount();
+});
+
+app.addEventListener('change', e => {
+  const t = e.target;
+  if (!t.matches('select[data-i]')) return;
+  const i = +t.dataset.i, v = +t.value, j = serial.indexOf(v);
+  serial[j] = serial[i];
+  serial[i] = v;
+  drawSerial();
+});
+
+/* ---------- মাঠ ---------- */
+const wob = i => {
+  const y = k => (6 + Math.sin(i * 2.1 + k * 1.7) * 2.4).toFixed(1);
+  return `M4 ${y(0)} C 70 ${y(1)}, 130 ${y(2)}, 190 ${y(3)} S 262 ${y(4)}, 276 ${y(5)}`;
+};
+
+function game() {
+  clearTimers(); closeSheet();
+  const n = players().length;
+  claims = Array(n).fill(null); history = [];
+  ready = false; done = false;
+  const rm = matchMedia('(prefers-reduced-motion: reduce)').matches, k = rm ? 0 : 1;
+  const order = shuffle(ident(n));              // নাম্বার ওলটপালট ক্রমে লেখা হয়
+  const T1 = 350 * k, S1 = 85 * k;
+  const T2 = T1 + n * S1 + 200 * k, S2 = 60 * k;
+  const T3 = T2 + n * S2 + 500 * k;
+  const READY = T3 + 1000 * k + (rm ? 150 : 0);
+
+  const rows = serial.map((v, i) => `
+    <div class="row">
+      <div class="num"><span style="--d:${T1 + (order[i] - 1) * S1}ms;--r:${((i * 7) % 5 - 2) * 2}deg">${bn(v)}</span></div>
+      <button class="slot" data-line="${i}" aria-label="সারি ${bn(i + 1)}">
+        <span class="nm"></span>
+        <svg class="ln" viewBox="0 0 280 14" preserveAspectRatio="none" aria-hidden="true">
+          <path class="hi" pathLength="1" d="${wob(i)}" transform="translate(0 2)" style="--d:${T2 + i * S2}ms"/>
+          <path pathLength="1" d="${wob(i)}" style="--d:${T2 + i * S2}ms"/>
+        </svg>
+      </button>
+    </div>`).join('');
+
+  app.innerHTML = `
+    <h1 id="ttl"></h1>
+    <p class="sub" id="st"></p>
+    <div class="ground" id="ground" style="--bd:${T3 + 640 * k}ms">
+      <div class="board">${rows}
+        <div class="bat" style="--d:${T3}ms"><i class="handle"></i><i class="blade"></i><i class="tape"></i><i class="tag"></i></div>
+      </div>
+    </div>
+    <div class="dock" id="dock">
+      <div class="acts">
+        <button id="undo" disabled>↩ শেষটা বাতিল</button>
+        <button id="rev" class="primary" disabled>ফলাফল দেখাও</button>
+      </div>
+      <button class="link" id="back">সেটআপে ফিরে যাও</button>
+    </div>`;
+  ground = $('#ground');
+  rowsEl = [...ground.querySelectorAll('.row')];
+  const ttl = t => { $('#ttl').textContent = t; };
+  ttl('নাম্বার লেখা হচ্ছে…');
+  later(() => ttl('দাগ টানা হচ্ছে…'), T2);
+  later(() => ttl('ব্যাট দিয়ে ঢাকা হচ্ছে…'), T3);
+  later(() => {
+    ready = true;
+    ground.classList.add('ready');
+    ttl('নিজের দাগে চাপ দাও');
+    $('#rev').disabled = false;
+    counter();
+  }, READY);
+}
+
+function counter() {
+  const d = claims.filter(c => c !== null).length;
+  $('#st').textContent = `নেওয়া হয়েছে ${bn(d)}/${bn(claims.length)}। ব্যাট না সরানো পর্যন্ত কেউ নম্বর জানবে না।`;
+  const u = $('#undo'); if (u) u.disabled = !d;
+}
+
+function puff(el) {
+  const r = el.getBoundingClientRect(), g = ground.getBoundingClientRect();
+  for (let i = 0; i < 9; i++) {
+    const d = document.createElement('i');
+    d.className = 'dust';
+    d.style.left = (r.left - g.left + 30 + Math.random() * Math.max(r.width - 60, 10)) + 'px';
+    d.style.top = (r.top - g.top + r.height - 12) + 'px';
+    d.style.setProperty('--x', (Math.random() * 44 - 22) + 'px');
+    d.style.setProperty('--y', (-8 - Math.random() * 28) + 'px');
+    ground.appendChild(d);
+    setTimeout(() => d.remove(), 700);
+  }
+}
+
+function claim(line, p) {
+  claims[line] = p; history.push(line);
+  const row = rowsEl[line], nm = row.querySelector('.nm');
+  row.classList.add('taken');
+  nm.textContent = names[p].trim();
+  nm.classList.remove('on'); void nm.offsetWidth; nm.classList.add('on');
+  puff(row.querySelector('.slot'));
+  counter();
+}
+function unclaim(line) {
+  claims[line] = null;
+  const row = rowsEl[line], nm = row.querySelector('.nm');
+  row.classList.remove('taken'); nm.textContent = ''; nm.classList.remove('on');
+  counter();
+}
+
+function openSheet(line) {
+  const free = players().filter(p => !claims.includes(p.i));
+  if (!free.length) return;
+  sheet.dataset.line = line;
+  sheet.innerHTML = `<div class="panel" role="dialog" aria-label="খেলোয়াড় বাছো">
+    <h3>তুমি কোন খেলোয়াড়?</h3>
+    <div class="chips">${free.map(p => `<button data-p="${p.i}">${esc(p.n)}</button>`).join('')}</div>
+    <button class="link" id="cancel">বাতিল</button></div>`;
+  sheet.hidden = false;
+}
+function closeSheet() { sheet.hidden = true; sheet.innerHTML = ''; }
+
+sheet.addEventListener('click', e => {
+  const p = e.target.closest('[data-p]');
+  if (p) { const line = +sheet.dataset.line; closeSheet(); claim(line, +p.dataset.p); return; }
+  if (e.target === sheet || e.target.id === 'cancel') closeSheet();
+});
+
+/* ---------- ফলাফল ---------- */
+const sorted = () => claims.map((c, i) => ({ num: serial[i], c })).sort((a, b) => a.num - b.num);
+
+function reveal() {
+  done = true; ready = false;
+  ground.classList.remove('ready');
+  $('#ttl').textContent = 'ব্যাট সরানো হলো';
+  $('#st').textContent = 'কে কত নম্বর পেল, দেখে নাও।';
+  ground.querySelector('.bat').classList.add('off');
+  later(() => ground.classList.add('shown'), 700);
+  later(() => {
+    ground.insertAdjacentHTML('afterend', `<ol class="res">${sorted().map((r, k) => `
+      <li class="${r.c === null ? 'empty' : ''}" style="--d:${k * 90}ms">
+        <span class="no">${ord(r.num)}</span>
+        <span class="nm2">${r.c === null ? 'কেউ নেয়নি' : esc(names[r.c].trim())}</span>
+      </li>`).join('')}</ol>`);
+    $('#dock').innerHTML = `
+      <div class="acts"><button id="copy">কপি করো</button><button id="again" class="primary">আবার খেলো</button></div>
+      <button class="link" id="back">সেটআপে ফিরে যাও</button>`;
+  }, 1000);
+}
+
+function copyText() {
+  const txt = 'ব্যাটিং সিরিয়াল\n' + sorted().map(r => `${ord(r.num)} — ${r.c === null ? 'কেউ নেয়নি' : names[r.c].trim()}`).join('\n');
+  const btn = $('#copy');
+  const ok = () => { btn.textContent = 'কপি হয়েছে'; setTimeout(() => { btn.textContent = 'কপি করো'; }, 1500); };
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); ok(); } catch (e) { btn.textContent = 'কপি করা যায়নি'; }
+    ta.remove();
+  };
+  try { navigator.clipboard.writeText(txt).then(ok, fallback); } catch (e) { fallback(); }
+}
+
+/* ---------- বাটন ---------- */
+document.addEventListener('click', e => {
+  const t = e.target.closest('button');
+  if (!t || sheet.contains(t)) return;
+  if (t.id === 'shuf') { serial = shuffle(ident(serial.length)); drawSerial(); }
+  else if (t.id === 'inorder') { serial = ident(serial.length); drawSerial(); }
+  else if (t.id === 'go') game();
+  else if (t.dataset.line !== undefined) { const l = +t.dataset.line; if (ready && claims[l] === null) openSheet(l); }
+  else if (t.id === 'undo') { const l = history.pop(); if (l !== undefined && !done) unclaim(l); }
+  else if (t.id === 'rev') {
+    if (!ready) return;
+    if (!armed) {
+      armed = true;
+      t.textContent = 'আবার চাপো, নিশ্চিত?';
+      armTimer = setTimeout(() => { armed = false; if (t.isConnected) t.textContent = 'ফলাফল দেখাও'; }, 3000);
+    } else { armed = false; clearTimeout(armTimer); reveal(); }
+  }
+  else if (t.id === 'copy') copyText();
+  else if (t.id === 'again') { serial = shuffle(ident(players().length)); game(); }
+  else if (t.id === 'back') setup();
+});
+
+setup();
+</script>
+</body>
+</html>
